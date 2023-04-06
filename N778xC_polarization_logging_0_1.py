@@ -41,6 +41,11 @@ try:
     myid = polsyn.query('*IDN?').strip()
     print('N778xC ID: ' + myid)
     
+    #deactivate autogain
+    polsyn.write(':POLarimeter:AGFlag')
+    #set manual gain
+    polsyb.write(':POLarimeter:GAIN 0')
+
     ## Non Transient file and Transient file w/ time stamps
     
     ## Setup Logging
