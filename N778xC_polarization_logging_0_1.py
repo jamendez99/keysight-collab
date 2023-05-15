@@ -21,7 +21,14 @@ polsyn_wave = '1550e-6'
 polsyn_loop = '1'
 
 ## file path
-file_coarse = 'C:/Users/Public/N778xC_SOP_coarse.txt'
+storage_dir = 'C:\\Users\\cool-sailboat\\Box\\UChicago_Keysight\\keysight_link_data\\anl_pol_longterm\\24hr_may_15'
+
+## Number of iterations
+num_loops = 1000
+time_to_run = 86400  # 24 hours in seconds
+
+now = datetime.now().strftime("%Y%m%d-%H%M%S.%f")
+file_coarse = storage_dir + 'N778xC_SOP_coarse_{}.txt'.format(now)
 sop_file = open(file_coarse , 'w')
 sop_file.write('Avg: {} Rate: {} {}'.format(polsyn_avg,polsyn_rate,chr(10)))
 sop_file.write('time, Power (W), S1, S2, S3 {}'.format(chr(10)))
@@ -44,7 +51,7 @@ try:
     #deactivate autogain
     polsyn.write(':POLarimeter:AGFlag')
     #set manual gain
-    polsyb.write(':POLarimeter:GAIN 0')
+    polsyn.write(':POLarimeter:GAIN 8')
 
     ## Non Transient file and Transient file w/ time stamps
     
@@ -67,7 +74,9 @@ try:
     myloop = polsyn.query(':POLarimeter:SWEep:LOOP?').strip()
     print('loop: {}'.format(myloop))
     
-    for i in range(0,10):
+    start_of_loop = time.time()
+    # for i in range(num_loops):
+    while time.time() - start_of_loop < time_to_run:
     
         ## Start Logging
         polsyn.write('POLarimeter:SWEep:STARt SOP')
@@ -123,7 +132,7 @@ try:
         print ('angle max: {}'.format(angle_max))
         
         if angle_max > sop_thresh:
-            file_transient = 'C:/Users/Public/N778xC_SOP_transient_{}.txt'.format(now)
+            file_transient = storage_dir + 'N778xC_SOP_transient_{}.txt'.format(now)
             sop_file_transient = open(file_transient , 'w')
             sop_file_transient.write('Power (W), Angle (deg), S1, S2, S3 {}'.format(chr(10)))
             for j in range(0,len(mypower)):
