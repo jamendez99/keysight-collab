@@ -51,12 +51,18 @@ def parse_args():
         default='0.1MHz',
         help="Rate for taking samples. Allowed values are '0.1MHz', '0.5MHz', or '10Hz'. Default is '0.1MHz'."
     )
+    parser.add_argument(
+        '-T', '--threshold',
+        type=float,
+        default=5.0,
+        help="Minimum angle deviation to trigger transient storage (in degrees). Default is 5 degrees."
+    )
 
     args = parser.parse_args()
-    return args.time, args.output, args.points, args.average, args.rate
+    return args.time, args.output, args.points, args.average, args.rate, args.threshold
 
 
-runtime, storage_dir, points_int, polsyn_avg, polsyn_rate = parse_args()
+runtime, storage_dir, points_int, polsyn_avg, polsyn_rate, sop_thresh = parse_args()
 polsyn_points = str(points_int)
 
 # Connect to Polarization Synthesizer
@@ -160,8 +166,6 @@ try:
         sop_file.close()  
         
         # Check for SOP variation
-        sop_thresh = 5  # Poincare Sphere Deviation
-
         a = [mysop[0], mysop[1], mysop[2]]
 
         # angle = []
