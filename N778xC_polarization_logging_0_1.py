@@ -8,24 +8,63 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pyvisa as visa
 from datetime import datetime
+import argparse
 
-rm = visa.ResourceManager()
+
+## default file path
+DEFAULT_DIR = 'C:\\Users\\cool-sailboat\\Box\\UChicago_Keysight\\keysight_link_data\\anl_pol_longterm\\'
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        '-t', '--time',
+        type=int,
+        default=1,
+        help="Time to run measurement, given in hours. Default is 1."
+    )
+    parser.add_argument(
+        '-o', '--output',
+        type=str,
+        default=DEFAULT_DIR,
+        help="Directory in which to store output text files. "
+             f"Default is '{DEFAULT_DIR}'."
+    )
+    parser.add_argument(
+        '-p', '--points',
+        type=int,
+        choices=range(0, int(1e6)),
+        default=int(1e5),
+        help="Number of points to accumulate for each transient run. Default is 1e5."
+    )
+    parser.add_argument(
+        '-a', '--average',
+        type=str,
+        choices=['1us', '100us'],
+        default='1us',
+        help="Time to average for each sample. Allowed values are '1us' and '100us'. Default is '1us'."
+    )
+    parser.add_argument(
+        '-r', '--rate',
+        type=str,
+        choices=['0.1MHz', '0.5MHz', '10Hz'],
+        default='0.1MHz',
+        help="Rate for taking samples. Allowed values are '0.1MHz', '0.5MHz', or '10Hz'. Default is '0.1MHz'."
+    )
+
+    args = parser.parse_args()
+    return args.time, args.output, args.points, args.average, args.rate
+
+
+runtime, storage_dir, points_int, polsyn_avg, polsyn_rate = parse_args()
+polsyn_points = str(points_int)
 
 ## Connect to Polarization Synthesizer
+rm = visa.ResourceManager()
 
 ## Setup Polarization Controller Sequence
-polsyn_points = '100000'  #Integer value from 0 to 1000000
-polsyn_avg = '1us' # '100us' # '1us'
-polsyn_rate = '0.1MHz' # '10Hz' #'0.5MHz'
 polsyn_wave = '1550e-6'
-polsyn_loop = '1'
-
-## file path
-storage_dir = 'C:\\Users\\cool-sailboat\\Box\\UChicago_Keysight\\keysight_link_data\\anl_pol_longterm\\24hr_may_15'
-
-## Number of iterations
-num_loops = 1000
-time_to_run = 86400  # 24 hours in seconds
 
 now = datetime.now().strftime("%Y%m%d-%H%M%S.%f")
 file_coarse = storage_dir + 'N778xC_SOP_coarse_{}.txt'.format(now)
@@ -34,7 +73,7 @@ sop_file.write('Avg: {} Rate: {} {}'.format(polsyn_avg,polsyn_rate,chr(10)))
 sop_file.write('time, Power (W), S1, S2, S3 {}'.format(chr(10)))
 sop_file.close()
 
-try: 
+try:
 
     ## Open Connection
     polsyn = rm.open_resource('TCPIP0::100.65.27.149::inst0::INSTR')
@@ -73,10 +112,10 @@ try:
     polsyn.write(':POLarimeter:SWEep:LOOP 1')
     myloop = polsyn.query(':POLarimeter:SWEep:LOOP?').strip()
     print('loop: {}'.format(myloop))
-    
+
+    runtime *= 3600  # convert from hours to seconds
     start_of_loop = time.time()
-    # for i in range(num_loops):
-    while time.time() - start_of_loop < time_to_run:
+    while time.time() - start_of_loop < runtime:
     
         ## Start Logging
         polsyn.write('POLarimeter:SWEep:STARt SOP')
