@@ -18,7 +18,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        '-t', '--time',
+        'runtime_hours',
         type=int,
         default=1,
         help="Time to run measurement, given in hours. Default is 1."
@@ -52,14 +52,14 @@ def parse_args():
         help="Rate for taking samples. Allowed values are '0.1MHz', '0.5MHz', or '10Hz'. Default is '0.1MHz'."
     )
     parser.add_argument(
-        '-T', '--threshold',
+        '-t', '--threshold',
         type=float,
         default=5.0,
         help="Minimum angle deviation to trigger transient storage (in degrees). Default is 5 degrees."
     )
 
     args = parser.parse_args()
-    return args.time, args.output, args.points, args.average, args.rate, args.threshold
+    return args.runtime_hours, args.output, args.points, args.average, args.rate, args.threshold
 
 
 runtime, storage_dir, points_int, polsyn_avg, polsyn_rate, sop_thresh = parse_args()
