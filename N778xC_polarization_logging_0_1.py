@@ -9,9 +9,13 @@ import pyvisa as visa
 from datetime import datetime
 import argparse
 
+from log_utils import get_basic_logger
+
 
 # default file path
 DEFAULT_DIR = 'C:\\Users\\cool-sailboat\\Box\\UChicago_Keysight\\keysight_link_data\\anl_pol_longterm\\'
+
+LOGGING_SEVERITY = 'i'
 
 
 def parse_args():
@@ -62,8 +66,12 @@ def parse_args():
     return args.runtime_hours, args.output, args.points, args.average, args.rate, args.threshold
 
 
+# get arguments
 runtime, storage_dir, points_int, polsyn_avg, polsyn_rate, sop_thresh = parse_args()
 polsyn_points = str(points_int)
+
+# set up logger
+logger = get_basic_logger("test", LOGGING_SEVERITY)
 
 # Connect to Polarization Synthesizer
 rm = visa.ResourceManager()
@@ -73,10 +81,15 @@ polsyn_wave = '1550e-6'
 
 now = datetime.now().strftime("%Y%m%d-%H%M%S.%f")
 file_coarse = storage_dir + 'N778xC_SOP_coarse_{}.txt'.format(now)
+logger.info(f"Writing to output file '{file_coarse}'.")
+
 sop_file = open(file_coarse, 'w')
 sop_file.write('Avg: {} Rate: {} {}'.format(polsyn_avg, polsyn_rate, chr(10)))
 sop_file.write('time, Power (W), S1, S2, S3 {}'.format(chr(10)))
 sop_file.close()
+
+logger.info(f'Average: {polsyn_avg}')
+logger.info(f'Rate: {polsyn_rate}')
 
 
 try:
@@ -90,7 +103,7 @@ try:
     _ = polsyn.query('*OPC?')
     # Query ID
     myid = polsyn.query('*IDN?').strip()
-    print('N778xC ID: ' + myid)
+    logger.info('N778xC ID: ' + myid)
     
     # deactivate autogain
     polsyn.write(':POLarimeter:AGFlag')
@@ -104,19 +117,21 @@ try:
     # Wavelength
     polsyn.write(':POLarimeter:WAVelength {}'.format(polsyn_wave))
     mywave = polsyn.query(':POLarimeter:WAVelength?').strip()
-    print('wave: {}'.format(mywave))
+    logger.info('wave: {}'.format(mywave))
+
     # Points
     polsyn.write(':POLarimeter:SWEep:SAMPles {}'.format(polsyn_points))
     mypoints = polsyn.query(':POLarimeter:SWEep:SAMPles?').strip()
-    print('points: {}'.format(mypoints))
+    logger.info('points: {}'.format(mypoints))
+
     polsyn.write(':POLarimeter:SWEep:SRATe {},{}'.format(polsyn_rate, polsyn_avg))
     myrate = polsyn.query(':POLarimeter:SWEep:SRATe?').strip()
-    print('rate: {}'.format(myrate))
+    logger.info('rate: {}'.format(myrate))
     
     # Define Sweep Mode
     polsyn.write(':POLarimeter:SWEep:LOOP 1')
     myloop = polsyn.query(':POLarimeter:SWEep:LOOP?').strip()
-    print('loop: {}'.format(myloop))
+    logger.info('loop: {}'.format(myloop))
 
     runtime *= 3600  # convert from hours to seconds
     start_of_loop = time.time()
@@ -132,10 +147,11 @@ try:
             else:
                 # Query Status
                 stat = polsyn.query('POLarimeter:SWEep:STATe?').strip()
-                print('stat: {}'.format(stat))
+                logger.debug('stat: {}'.format(stat))
                 mylogpoints = polsyn.query(':POLarimeter:SWEep:SAMPles:CURRent?').strip()
-                print('log points: {}'.format(mylogpoints))
+                logger.debug('log points: {}'.format(mylogpoints))
                 time.sleep(0.1)
+        logger.info('Data available.')
             
         # Query Data
         start = time.time()
@@ -148,7 +164,7 @@ try:
                                              is_big_endian=False,
                                              chunk_size=10000000)
         xfer_time = time.time() - start
-        print('xfer time: {}'.format(str(xfer_time)))
+        logger.debug('xfer time: {}'.format(str(xfer_time)))
         
         mysop = np.array(mysop)
         mysop0 = mysop[0::3]
@@ -179,7 +195,7 @@ try:
         angle = (180/np.pi) * np.arccos((a[0]*mysop0 + a[1]*mysop1 + a[2]*mysop2) / (maga*magb))
         angle = np.nan_to_num(angle)
         angle_max = np.amax(angle)
-        print('angle max: {}'.format(angle_max))
+        logger.info('angle max: {}'.format(angle_max))
         
         if angle_max > sop_thresh:
             file_transient = storage_dir + 'N778xC_SOP_transient_{}.txt'.format(now)
@@ -191,14 +207,15 @@ try:
             sop_file_transient.close()
 
         file_time = time.time() - start
-        print('file time: {}'.format(str(file_time)))
+        logger.debug('file time: {}'.format(str(file_time)))
 
     # Close Instruments
+    logger.info('Closing instrument connection.')
     polsyn.close()
 
 except Exception as err:
-    print('Exception: ' + str(err))
+    logger.error('Exception: ' + str(err))
     
 finally:
     # perform clean up operations
-    print('complete')
+    logger.info('Complete.')
