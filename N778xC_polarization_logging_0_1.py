@@ -13,7 +13,7 @@ from log_utils import get_basic_logger
 
 
 # default file path
-DEFAULT_DIR = 'C:\\Users\\cool-sailboat\\Box\\UChicago_Keysight\\keysight_link_data\\anl_pol_longterm\\'
+DEFAULT_DIR = 'C:\\Users\\cool-sailboat\\Box\\UChicago_Keysight\\keysight_link_data\\anl_pol_longterm\\test_data\\'
 
 LOGGING_SEVERITY = 'i'
 
@@ -23,8 +23,8 @@ def parse_args():
 
     parser.add_argument(
         'runtime_hours',
-        type=int,
-        default=1,
+        type=float,
+        default=1.0,
         help="Time to run measurement, given in hours. Default is 1."
     )
     parser.add_argument(
@@ -37,9 +37,8 @@ def parse_args():
     parser.add_argument(
         '-p', '--points',
         type=int,
-        choices=range(0, int(1e6)),
         default=int(1e5),
-        help="Number of points to accumulate for each transient run. Default is 1e5."
+        help="Number of points to accumulate for each transient run. Must be between 0 and 1e6. Default is 1e5."
     )
     parser.add_argument(
         '-a', '--average',
@@ -63,6 +62,8 @@ def parse_args():
     )
 
     args = parser.parse_args()
+    if args.points < 0 or args.points > int(1e6):
+        raise argparse.ArgumentError(f"Invalid value '{args.points}' given for points.")
     return args.runtime_hours, args.output, args.points, args.average, args.rate, args.threshold
 
 
@@ -71,7 +72,7 @@ runtime, storage_dir, points_int, polsyn_avg, polsyn_rate, sop_thresh = parse_ar
 polsyn_points = str(points_int)
 
 # set up logger
-logger = get_basic_logger("test", LOGGING_SEVERITY)
+logger = get_basic_logger("anl_pol_longterm", LOGGING_SEVERITY)
 
 # Connect to Polarization Synthesizer
 rm = visa.ResourceManager()
