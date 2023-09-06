@@ -39,3 +39,5 @@ def autocorrelation(vecs):
         autocorrelation[i] = np.mean(inner_products)
 
     return lag_values, autocorrelation
+
+# Test comment
